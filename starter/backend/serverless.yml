@@ -23,6 +23,17 @@ provider:
     AUTH0_DOMAIN: dev-pjll62lg5tegu38b.us.auth0.com
     AUTH0_AUDIENCE: https://todo-api
 
+  tracing:
+    lambda: true
+    apiGateway: true
+
+  logs:
+    restApi:
+      accessLogging: true
+      executionLogging: true
+      level: INFO
+      fullExecutionData: false
+
 functions:
 
   Auth:

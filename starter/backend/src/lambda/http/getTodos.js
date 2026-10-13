@@ -1,21 +1,8 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import {
-  DynamoDBDocumentClient,
-  QueryCommand
-} from '@aws-sdk/lib-dynamodb'
-import {
-  S3Client,
-  GetObjectCommand
-} from '@aws-sdk/client-s3'
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
-const dynamoDB = DynamoDBDocumentClient.from(new DynamoDBClient({}))
-const s3 = new S3Client({})
-
-const todosTable = process.env.TODOS_TABLE
-const attachmentsBucket = process.env.ATTACHMENTS_BUCKET
+import { getTodos } from '../../businessLogic/todos.js'
 
 export async function handler(event) {
+  // Get the authenticated user's ID
   const userId = event.requestContext?.authorizer?.principalId
 
   if (!userId) {
@@ -23,39 +10,8 @@ export async function handler(event) {
   }
 
   try {
-    const result = await dynamoDB.send(
-      new QueryCommand({
-        TableName: todosTable,
-        KeyConditionExpression: 'userId = :userId',
-        ExpressionAttributeValues: {
-          ':userId': userId
-        }
-      })
-    )
-
-    const items = await Promise.all(
-      (result.Items ?? []).map(async (todo) => {
-        const { attachmentKey, ...publicTodo } = todo
-
-        if (!attachmentKey) {
-          return publicTodo
-        }
-
-        const attachmentUrl = await getSignedUrl(
-          s3,
-          new GetObjectCommand({
-            Bucket: attachmentsBucket,
-            Key: attachmentKey
-          }),
-          { expiresIn: 300 }
-        )
-
-        return {
-          ...publicTodo,
-          attachmentUrl
-        }
-      })
-    )
+    // Retrieve TODOs through the business-logic layer
+    const items = await getTodos(userId)
 
     return response(200, { items })
   } catch (error) {
@@ -67,6 +23,7 @@ export async function handler(event) {
   }
 }
 
+// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,

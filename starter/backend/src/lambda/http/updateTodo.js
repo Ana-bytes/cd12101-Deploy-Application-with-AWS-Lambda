@@ -1,16 +1,11 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+
 import {
-  DynamoDBDocumentClient,
-  UpdateCommand
-} from '@aws-sdk/lib-dynamodb'
-
-const dynamoDB = DynamoDBDocumentClient.from(
-  new DynamoDBClient({})
-)
-
-const todosTable = process.env.TODOS_TABLE
+  updateTodo,
+  isValidUpdatedTodo
+} from '../../businessLogic/todos.js'
 
 export async function handler(event) {
+  // Get authenticated user ID and TODO ID
   const userId = event.requestContext?.authorizer?.principalId
   const todoId = event.pathParameters?.todoId
 
@@ -22,6 +17,7 @@ export async function handler(event) {
     return response(400, { error: 'Missing TODO ID' })
   }
 
+  // Parse request body
   let updatedTodo
 
   try {
@@ -30,48 +26,22 @@ export async function handler(event) {
     return response(400, { error: 'Invalid JSON body' })
   }
 
-  if (
-    !updatedTodo ||
-    typeof updatedTodo.name !== 'string' ||
-    !updatedTodo.name.trim() ||
-    typeof updatedTodo.dueDate !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(updatedTodo.dueDate) ||
-    !Number.isFinite(Date.parse(updatedTodo.dueDate)) ||
-    new Date(updatedTodo.dueDate).toISOString().slice(0, 10) !== updatedTodo.dueDate ||
-    typeof updatedTodo.done !== 'boolean'
-  ) {
+  // Validate the updated TODO fields
+  if (!isValidUpdatedTodo(updatedTodo)) {
     return response(400, {
       error: 'Valid name, dueDate and done fields are required'
     })
   }
 
   try {
-    const result = await dynamoDB.send(
-      new UpdateCommand({
-        TableName: todosTable,
-        Key: {
-          userId,
-          todoId
-        },
-        UpdateExpression:
-          'SET #name = :name, dueDate = :dueDate, done = :done',
-        ConditionExpression:
-          'attribute_exists(userId) AND attribute_exists(todoId)',
-        ExpressionAttributeNames: {
-          '#name': 'name'
-        },
-        ExpressionAttributeValues: {
-          ':name': updatedTodo.name.trim(),
-          ':dueDate': updatedTodo.dueDate,
-          ':done': updatedTodo.done
-        },
-        ReturnValues: 'ALL_NEW'
-      })
+    // Update through the business-logic layer
+    const item = await updateTodo(
+      userId,
+      todoId,
+      updatedTodo
     )
 
-    return response(200, {
-      item: result.Attributes
-    })
+    return response(200, { item })
   } catch (error) {
     if (error.name === 'ConditionalCheckFailedException') {
       return response(404, {
@@ -87,6 +57,7 @@ export async function handler(event) {
   }
 }
 
+// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,

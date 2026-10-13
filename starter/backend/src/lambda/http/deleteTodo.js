@@ -1,16 +1,8 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
-import {
-  DynamoDBDocumentClient,
-  DeleteCommand
-} from '@aws-sdk/lib-dynamodb'
 
-const dynamoDB = DynamoDBDocumentClient.from(
-  new DynamoDBClient({})
-)
-
-const todosTable = process.env.TODOS_TABLE
+import { deleteTodo } from '../../businessLogic/todos.js'
 
 export async function handler(event) {
+  // Get authenticated user ID and TODO ID
   const userId = event.requestContext?.authorizer?.principalId
   const todoId = event.pathParameters?.todoId
 
@@ -23,17 +15,8 @@ export async function handler(event) {
   }
 
   try {
-    await dynamoDB.send(
-      new DeleteCommand({
-        TableName: todosTable,
-        Key: {
-          userId,
-          todoId
-        },
-        ConditionExpression:
-          'attribute_exists(userId) AND attribute_exists(todoId)'
-      })
-    )
+    // Delete through the business-logic layer
+    await deleteTodo(userId, todoId)
 
     return response(200, {
       message: 'TODO deleted successfully'
@@ -53,6 +36,7 @@ export async function handler(event) {
   }
 }
 
+// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,

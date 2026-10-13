@@ -1,23 +1,18 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+
 import {
-  DynamoDBDocumentClient,
-  PutCommand
-} from '@aws-sdk/lib-dynamodb'
-import { v4 as uuidv4 } from 'uuid'
-
-const dynamoDB = DynamoDBDocumentClient.from(
-  new DynamoDBClient({})
-)
-
-const todosTable = process.env.TODOS_TABLE
+  createTodo,
+  isValidTodo
+} from '../../businessLogic/todos.js'
 
 export async function handler(event) {
+  // Get the authenticated user's ID from API Gateway
   const userId = event.requestContext?.authorizer?.principalId
 
   if (!userId) {
     return response(401, { error: 'Unauthorized' })
   }
 
+  // Parse the incoming request body
   let newTodo
 
   try {
@@ -26,36 +21,16 @@ export async function handler(event) {
     return response(400, { error: 'Invalid JSON body' })
   }
 
-  if (
-    !newTodo ||
-    typeof newTodo.name !== 'string' ||
-    !newTodo.name.trim() ||
-    typeof newTodo.dueDate !== 'string' ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(newTodo.dueDate) ||
-    !Number.isFinite(Date.parse(newTodo.dueDate)) ||
-    new Date(newTodo.dueDate).toISOString().slice(0, 10) !== newTodo.dueDate
-  ) {
+  // Validate the TODO request
+  if (!isValidTodo(newTodo)) {
     return response(400, {
       error: 'Valid name and dueDate (YYYY-MM-DD) are required'
     })
   }
 
-  const item = {
-    userId,
-    todoId: uuidv4(),
-    createdAt: new Date().toISOString(),
-    name: newTodo.name.trim(),
-    dueDate: newTodo.dueDate,
-    done: false
-  }
-
+  // Create and save the TODO through the business-logic layer
   try {
-    await dynamoDB.send(
-      new PutCommand({
-        TableName: todosTable,
-        Item: item
-      })
-    )
+    const item = await createTodo(userId, newTodo)
 
     return response(201, { item })
   } catch (error) {
@@ -67,6 +42,7 @@ export async function handler(event) {
   }
 }
 
+// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,
