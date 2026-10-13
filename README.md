@@ -419,7 +419,7 @@ deployment, and testing of the application.
 The React application running locally and connecting to the
 deployed backend.
 
-![Local Frontend Build](screenshots/local_build.png)
+Local Frontend Build: screenshots/local_build.png
 
 ### 10.2 Create TODO
 
@@ -427,7 +427,7 @@ A TODO item successfully created through the React frontend.
 
 This screenshot was captured before the code refactoring.
 
-![Create TODO](screenshots/pre-refactor_add-todo.png)
+Create TODO: screenshots/pre-refactor_add-todo.png
 
 ### 10.3 Update TODO
 
@@ -435,7 +435,7 @@ A TODO item updated through the frontend.
 
 This screenshot was captured before the code refactoring.
 
-![Update TODO](screenshots/pre-refactor_edit-todo.png)
+Update TODO: screenshots/pre-refactor_edit-todo.png
 
 ### 10.4 Delete TODO
 
@@ -443,7 +443,7 @@ Evidence collected during TODO deletion testing.
 
 This screenshot was captured before the code refactoring.
 
-![Delete TODO](screenshots/pre-refactor_delete-todo.png)
+Delete TODO: screenshots/pre-refactor_delete-todo.png
 
 ### 10.5 AWS Deployment
 
@@ -452,7 +452,7 @@ using the Serverless Framework.
 
 This screenshot was captured before the code refactoring.
 
-![AWS Deployment](screenshots/pre-refactor_deployment.png)
+AWS Deployment: screenshots/pre-refactor_deployment.png
 
 ### 10.6 User Isolation
 
@@ -460,14 +460,14 @@ Two authenticated users with separate TODO items.
 
 This screenshot was captured before the code refactoring.
 
-![User Isolation](screenshots/pre-refactor_user-isolation.png)
+User Isolation: screenshots/pre-refactor_user-isolation.png
 
 ### 10.7 Unauthorized Request
 
 An API request without valid authorization returning
 HTTP 401 Unauthorized.
 
-![Unauthorized Request](screenshots/pre-refactor_user-unauthorized-test.png)
+Unauthorized Request: screenshots/pre-refactor_user-unauthorized-test.png
 
 ### 10.8 Post-Refactoring Functionality
 
@@ -477,14 +477,14 @@ HTTP handlers, business logic, and data access layers.
 The screenshot demonstrates successful TODO operations and
 attachment display after the refactoring.
 
-![Post-Refactoring TODO Application](screenshots/refactor-todos.png)
+Post-Refactoring TODO Application: screenshots/refactor-todos.png
 
 ### 10.9 AWS Monitoring
 
 Evidence of CloudWatch logging, metrics, and AWS X-Ray
 verification.
 
-![AWS Monitoring](screenshots/AWS%20monitoring.png)
+AWS Monitoring: screenshots/AWS%20monitoring.png
 
 ## 11. Security Considerations
 
