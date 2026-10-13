@@ -1,21 +1,43 @@
 
 import { getTodos } from '../../businessLogic/todos.js'
+import { createLogger } from '../../utils/logger.mjs'
+
+const logger = createLogger('getTodos')
 
 export async function handler(event) {
-  // Get the authenticated user's ID
+  const requestId = event.requestContext?.requestId
   const userId = event.requestContext?.authorizer?.principalId
 
   if (!userId) {
+    logger.warn('Unauthorized TODO retrieval attempt', {
+      requestId
+    })
+
     return response(401, { error: 'Unauthorized' })
   }
 
+  logger.info('Retrieving TODOs', {
+    requestId,
+    userId
+  })
+
   try {
-    // Retrieve TODOs through the business-logic layer
     const items = await getTodos(userId)
+
+    logger.info('TODOs retrieved successfully', {
+      requestId,
+      userId,
+      todoCount: items.length
+    })
 
     return response(200, { items })
   } catch (error) {
-    console.error('Failed to retrieve TODOs', error)
+    logger.error('Failed to retrieve TODOs', {
+      requestId,
+      userId,
+      error: error.message,
+      stack: error.stack
+    })
 
     return response(500, {
       error: 'Internal server error'
@@ -23,7 +45,6 @@ export async function handler(event) {
   }
 }
 
-// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,

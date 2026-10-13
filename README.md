@@ -486,6 +486,110 @@ verification.
 
 AWS Monitoring: screenshots/AWS%20monitoring.png
 
+
+### 10.10 Reviewer Feedback and Resubmission Updates (October 2026)
+
+Following the initial Udacity project review, the application was updated and retested to address the feedback regarding functionality, authentication, and monitoring.
+
+#### 1. Application Functionality
+
+**Reviewer Feedback:**
+- TODO completion status was not updating correctly.
+- Issues were observed when deleting TODO items, particularly the last remaining item.
+- Application functionality required further verification.
+
+**Changes and Verification:**
+- Verified TODO creation, retrieval, completion, and deletion through the React frontend.
+- Confirmed that checkbox completion status persists after refreshing the browser.
+- Verified that deleted TODO items do not reappear after refreshing.
+- Tested deletion of the last remaining TODO item.
+- Successfully tested image attachment uploads and display.
+- Verified that TODO items remain isolated between authenticated users.
+
+**Result:** All tested TODO operations completed successfully.
+
+#### 2. Authentication and Session Persistence
+
+**Reviewer Feedback:**
+- Users were logged out after refreshing the application.
+
+**Changes Made:**
+- Updated `starter/client/src/index.js`.
+- Configured Auth0Provider with `cacheLocation="localstorage"` to preserve the authentication session across page refreshes.
+- Retested authentication and confirmed that users remain logged in after refreshing.
+- Verified that separate authenticated users can access only their own TODO items.
+
+**Result:** Authentication persistence and user isolation were verified successfully.
+
+#### 3. Application Monitoring and Logging
+
+**Reviewer Feedback:**
+- AWS X-Ray was configured, but additional evidence of actual tracing was required.
+- Application-level logging was insufficient.
+- Application-level CloudWatch metrics were missing.
+
+**Changes Made:**
+
+**CloudWatch Application Logging**
+- Implemented structured JSON logging using Winston across all five HTTP Lambda handlers:
+  - `getTodos.js`
+  - `createTodo.js`
+  - `updateTodo.js`
+  - `deleteTodo.js`
+  - `generateUploadUrl.js`
+- Added informational logs for successful operations and warning/error logs for unsuccessful operations.
+- Included relevant request IDs, user IDs, TODO IDs, and operation details.
+- Verified the generated logs in AWS CloudWatch.
+
+**CloudWatch Application-Level Metrics**
+- Created a CloudWatch metric filter for successful TODO creations.
+- Custom metric namespace: `TodoApp/Application`
+- Metric name: `TodoCreatedCount`
+- Confirmed that the metric recorded a successful TODO creation with a value of `1`.
+
+**AWS X-Ray**
+- Verified distributed tracing across API Gateway, the authentication Lambda, and the GetTodos Lambda.
+- Inspected individual request traces and execution timelines.
+- Confirmed successful traced requests with HTTP 200 responses.
+- Captured X-Ray trace evidence from the AWS Console.
+
+**Result:** Structured application logging, a custom CloudWatch metric, and AWS X-Ray distributed tracing were verified.
+
+#### 4. Updated Resubmission Evidence
+
+To make verification easier, an updated screen recording and monitoring screenshots have been included in the repository.
+
+**Application Functionality and Authentication**
+
+View Updated Application Flow Recording: screenshots/review_evidence/updated_flow.mp4
+
+The recording demonstrates the updated application functionality, including TODO operations, image attachment uploads, and authentication persistence after refreshing the browser.
+
+**CloudWatch Custom Application Metric**
+
+CloudWatch TODO Created Metric: screenshots/review_evidence/cloudwatch-todo-created-metric.png
+
+Shows the custom `TodoCreatedCount` metric under the `TodoApp/Application` namespace.
+
+**AWS X-Ray Distributed Tracing**
+
+AWS X-Ray GetTodos Trace: screenshots/review_evidence/xray-gettodos-trace.png
+
+Shows an individual request trace involving API Gateway, authentication, and the GetTodos Lambda.
+
+#### 5. Notes for Reviewers
+
+The application was deployed and tested using an AWS Lab environment. Since lab resources and sessions may not remain continuously available, the updated screen recording is provided as additional evidence of the application's working functionality.
+
+The application source code is available in:
+
+- Backend: `starter/backend/src/`
+- Frontend: `starter/client/src/`
+- Serverless configuration: `starter/backend/serverless.yml`
+- Updated review evidence: `starter/backend/screenshots/review_evidence/`
+
+The changes were implemented, deployed, and tested before resubmission.
+
 ## 11. Security Considerations
 
 The application implements the following security measures:

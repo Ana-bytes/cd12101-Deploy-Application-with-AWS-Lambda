@@ -3,38 +3,67 @@ import {
   createTodo,
   isValidTodo
 } from '../../businessLogic/todos.js'
+import { createLogger } from '../../utils/logger.mjs'
+
+const logger = createLogger('createTodo')
 
 export async function handler(event) {
-  // Get the authenticated user's ID from API Gateway
+  const requestId = event.requestContext?.requestId
   const userId = event.requestContext?.authorizer?.principalId
 
   if (!userId) {
+    logger.warn('Unauthorized TODO creation attempt', {
+      requestId
+    })
+
     return response(401, { error: 'Unauthorized' })
   }
 
-  // Parse the incoming request body
   let newTodo
 
   try {
     newTodo = JSON.parse(event.body ?? '')
   } catch {
+    logger.warn('Invalid JSON in TODO creation request', {
+      requestId
+    })
+
     return response(400, { error: 'Invalid JSON body' })
   }
 
-  // Validate the TODO request
   if (!isValidTodo(newTodo)) {
+    logger.warn('TODO creation validation failed', {
+      requestId,
+      userId
+    })
+
     return response(400, {
       error: 'Valid name and dueDate (YYYY-MM-DD) are required'
     })
   }
 
-  // Create and save the TODO through the business-logic layer
+  logger.info('Creating TODO', {
+    requestId,
+    userId
+  })
+
   try {
     const item = await createTodo(userId, newTodo)
 
+    logger.info('TODO created successfully', {
+      requestId,
+      userId,
+      todoId: item.todoId
+    })
+
     return response(201, { item })
   } catch (error) {
-    console.error('Failed to create TODO', error)
+    logger.error('Failed to create TODO', {
+      requestId,
+      userId,
+      error: error.message,
+      stack: error.stack
+    })
 
     return response(500, {
       error: 'Internal server error'
@@ -42,7 +71,6 @@ export async function handler(event) {
   }
 }
 
-// Build a consistent HTTP response
 function response(statusCode, body) {
   return {
     statusCode,

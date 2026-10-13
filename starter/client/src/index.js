@@ -14,6 +14,7 @@ ReactDOM.render(
     redirectUri={window.location.origin}
     audience={process.env.REACT_APP_AUTH0_AUDIENCE}
     scope="read:todo write:todo delete:todo"
+    cacheLocation="localstorage"
   >
     <App />
   </Auth0Provider>,
