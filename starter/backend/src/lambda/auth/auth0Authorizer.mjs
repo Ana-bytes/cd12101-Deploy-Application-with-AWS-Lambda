@@ -4,7 +4,15 @@ import { createLogger } from '../../utils/logger.mjs'
 
 const logger = createLogger('auth')
 
-const jwksUrl = 'https://test-endpoint.auth0.com/.well-known/jwks.json'
+const auth0Domain = process.env.AUTH0_DOMAIN
+const auth0Audience = process.env.AUTH0_AUDIENCE
+
+if (!auth0Domain || !auth0Audience) {
+  throw new Error('Missing Auth0 configuration')
+}
+
+const issuer = `https://${auth0Domain}/`
+const jwksUrl = `${issuer}.well-known/jwks.json`
 
 export async function handler(event) {
   try {
@@ -18,7 +26,7 @@ export async function handler(event) {
           {
             Action: 'execute-api:Invoke',
             Effect: 'Allow',
-            Resource: '*'
+            Resource: event.methodArn
           }
         ]
       }
@@ -34,7 +42,7 @@ export async function handler(event) {
           {
             Action: 'execute-api:Invoke',
             Effect: 'Deny',
-            Resource: '*'
+            Resource: event.methodArn
           }
         ]
       }
@@ -44,20 +52,59 @@ export async function handler(event) {
 
 async function verifyToken(authHeader) {
   const token = getToken(authHeader)
-  const jwt = jsonwebtoken.decode(token, { complete: true })
 
-  // TODO: Implement token verification
-  return undefined;
+  const decoded = jsonwebtoken.decode(token, { complete: true })
+
+  if (!decoded || decoded.header.alg !== 'RS256' || !decoded.header.kid) {
+    throw new Error('Invalid JWT header')
+  }
+
+   // Retrieve Auth0's public signing keys
+  const response = await Axios.get(jwksUrl, {
+    timeout: 5000
+  })
+
+  const signingKey = response.data.keys.find(
+    key =>
+      key.kid === decoded.header.kid &&
+      key.kty === 'RSA' &&
+      key.use === 'sig'
+  )
+
+  if (!signingKey) {
+    throw new Error('Signing key not found')
+  }
+  
+  const publicKey = signingKey.x5c?.[0]
+    ? `-----BEGIN CERTIFICATE-----\n${signingKey.x5c[0]}\n-----END CERTIFICATE-----`
+    : undefined
+
+  if (!publicKey) {
+    throw new Error('Signing certificate not found')
+  }
+
+  // Verify signature, issuer, audience and expiration
+  const verified = jsonwebtoken.verify(token, publicKey, {
+    algorithms: ['RS256'],
+    issuer,
+    audience: auth0Audience
+  })
+
+  if (typeof verified !== 'object' || !verified.sub) {
+    throw new Error('Invalid token subject')
+  }
+
+  return verified
 }
 
 function getToken(authHeader) {
   if (!authHeader) throw new Error('No authentication header')
 
-  if (!authHeader.toLowerCase().startsWith('bearer '))
+  const match = authHeader.match(/^Bearer\s+(\S+)$/i)
+
+  if (!match) {
     throw new Error('Invalid authentication header')
+  }
 
-  const split = authHeader.split(' ')
-  const token = split[1]
-
-  return token
+  return match[1]
 }

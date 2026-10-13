@@ -3,57 +3,184 @@ service: serverless-todo-app
 plugins:
   - serverless-iam-roles-per-function
 
-frameworkVersion: '3'
+frameworkVersion: '4'
+
+custom:
+  todosTableName: serverless-todos-${sls:stage}
+  todosCreatedAtIndex: userId-createdAt-index
+  attachmentsBucketName: serverless-todo-attachments-${aws:accountId}-${sls:stage}
 
 provider:
   name: aws
-  runtime: nodejs14.x
+  runtime: nodejs22.x
+  stage: dev
+  region: us-east-1
+
+  environment:
+    TODOS_TABLE: ${self:custom.todosTableName}
+    TODOS_CREATED_AT_INDEX: ${self:custom.todosCreatedAtIndex}
+    ATTACHMENTS_BUCKET: ${self:custom.attachmentsBucketName}
+    AUTH0_DOMAIN: dev-pjll62lg5tegu38b.us.auth0.com
+    AUTH0_AUDIENCE: https://todo-api
 
 functions:
 
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  # TODO: Configure this function
   GetTodos:
     handler: src/lambda/http/getTodos.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - !GetAtt TodosTable.Arn
+          - !Sub '${TodosTable.Arn}/index/*'
+      
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource: !Sub '${AttachmentsBucket.Arn}/*'
+
     events:
       - http:
           method: get
           path: todos
+          cors: true
+          authorizer:
+            name: Auth
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
 
-  # TODO: Configure this function
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+        - dynamodb:PutItem
+        Resource: !GetAtt TodosTable.Arn
+
     events:
       - http:
           method: post
           path: todos
+          cors: true
+          authorizer:
+            name: Auth
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
 
-  # TODO: Configure this function
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: !GetAtt TodosTable.Arn
+
     events:
       - http:
           method: patch
           path: todos/{todoId}
+          cors: true
+          authorizer:
+            name: Auth
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
 
-  # TODO: Configure this function
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: !GetAtt TodosTable.Arn
+
     events:
       - http:
           method: delete
           path: todos/{todoId}
+          cors: true
+          authorizer:
+            name: Auth
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
 
-  # TODO: Configure this function
   GenerateUploadUrl:
     handler: src/lambda/http/generateUploadUrl.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+        Resource: !GetAtt TodosTable.Arn
+    
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource: !Sub '${AttachmentsBucket.Arn}/*'
+
     events:
       - http:
           method: post
           path: todos/{todoId}/attachment
+          cors: true
+          authorizer:
+            name: Auth
+            type: TOKEN
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 0
 
 resources:
   Resources:
-    # TODO: Add any necessary AWS resources
+    TodosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.todosTableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: todoId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: todoId
+            KeyType: RANGE
+        LocalSecondaryIndexes:
+          - IndexName: userId-createdAt-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: createdAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.attachmentsBucketName}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          IgnorePublicAcls: true
+          BlockPublicPolicy: true
+          RestrictPublicBuckets: true
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - 'http://localhost:3000'
+              AllowedMethods:
+                - PUT
+                - GET
+                - HEAD
+              AllowedHeaders:
+                - '*'
+              MaxAge: 3000

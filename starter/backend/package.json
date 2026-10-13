@@ -25,5 +25,11 @@
     "serverless-iam-roles-per-function": "^3.2.0",
     "uuid": "^9.0.0",
     "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "serverless": "^4.43.0"
+  },
+  "allowScripts": {
+    "serverless@4.43.0": true
   }
 }
